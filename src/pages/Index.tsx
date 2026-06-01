@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 
 type Message = { id: number; text: string; out: boolean; time: string; sender?: string };
@@ -8,9 +8,78 @@ const CONTACTS: { id: number; name: string; avatar: string; online: boolean; sta
 const CHATS_INITIAL: Chat[] = [];
 type View = 'chats' | 'contacts' | 'profile' | 'settings';
 
+function getInitials(name: string) {
+  return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function WelcomeScreen({ onEnter }: { onEnter: (name: string) => void }) {
+  const [name, setName] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length < 2) return;
+    onEnter(name.trim());
+  };
+
+  return (
+    <div className="h-full flex items-center justify-center font-golos" style={{ background: 'hsl(var(--n-chat-area))' }}>
+      <div className="w-full max-w-sm px-6 animate-fade-in">
+
+        {/* Логотип */}
+        <div className="flex flex-col items-center mb-10">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 n-glow"
+            style={{ background: 'hsl(var(--n-accent))' }}
+          >
+            <span className="text-2xl font-bold" style={{ color: 'hsl(220 16% 8%)' }}>Н</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Николай</h1>
+          <p className="text-sm text-muted-foreground mt-1.5 text-center">
+            Мессенджер без регистрации.<br />Просто введи своё имя.
+          </p>
+        </div>
+
+        {/* Форма */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="relative">
+            <Icon name="User" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Твоё имя"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              autoFocus
+              maxLength={32}
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none border transition-all"
+              style={{
+                background: 'hsl(var(--n-chat-list))',
+                color: 'hsl(var(--foreground))',
+                borderColor: name.length >= 2 ? 'hsl(var(--n-accent) / 0.5)' : 'hsl(var(--border))',
+              }}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={name.trim().length < 2}
+            className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-30"
+            style={{ background: 'hsl(var(--n-accent))', color: 'hsl(220 16% 8%)' }}
+          >
+            Войти в Николай
+          </button>
+        </form>
+
+        <p className="text-xs text-muted-foreground text-center mt-5">
+          Имя сохранится в браузере — в следующий раз входить не придётся
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
+  const [myName, setMyName] = useState<string | null>(() => localStorage.getItem('nikolay_name'));
   const [activeView, setActiveView] = useState<View>('chats');
-  const [activeChatId, setActiveChatId] = useState<number | null>(1);
+  const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [inputText, setInputText] = useState('');
   const [chats, setChats] = useState<Chat[]>(CHATS_INITIAL);
   const [search, setSearch] = useState('');
@@ -19,6 +88,18 @@ export default function Index() {
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [phoneSearch, setPhoneSearch] = useState('');
   const [phoneSearchResult, setPhoneSearchResult] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
+
+  const handleEnter = (name: string) => {
+    localStorage.setItem('nikolay_name', name);
+    setMyName(name);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('nikolay_name');
+    setMyName(null);
+    setActiveChatId(null);
+    setChats([]);
+  };
 
   const handlePhoneSearch = (val: string) => {
     setPhoneSearch(val);
@@ -29,6 +110,8 @@ export default function Index() {
       setTimeout(() => setPhoneSearchResult('not_found'), 1200);
     }
   };
+
+  if (!myName) return <WelcomeScreen onEnter={handleEnter} />;
 
   const activeChat = chats.find(c => c.id === activeChatId);
 
@@ -120,6 +203,7 @@ export default function Index() {
           ))}
         </div>
         <button
+          onClick={handleLogout}
           className="w-10 h-10 rounded-xl flex items-center justify-center text-destructive hover:bg-destructive/10 transition-all duration-200"
           title="Выйти"
         >
@@ -130,7 +214,6 @@ export default function Index() {
       {/* Левая панель */}
       <aside className="n-chat-list flex flex-col w-72 shrink-0 border-r border-border">
 
-        {/* Заголовок */}
         <div className="px-4 pt-5 pb-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-base font-semibold">
@@ -178,6 +261,12 @@ export default function Index() {
         {/* Чаты */}
         {activeView === 'chats' && (
           <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
+            {filteredChats.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-40 gap-2 text-center px-4">
+                <Icon name="MessageCircle" size={28} className="text-muted-foreground opacity-40" />
+                <p className="text-xs text-muted-foreground">Чатов пока нет.<br />Найди собеседника через контакты.</p>
+              </div>
+            )}
             {filteredChats.map(chat => (
               <button
                 key={chat.id}
@@ -229,8 +318,6 @@ export default function Index() {
         {/* Контакты */}
         {activeView === 'contacts' && (
           <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
-
-            {/* Поиск по номеру */}
             <div className="px-2 pb-3">
               <p className="text-xs text-muted-foreground mb-2 px-1">Найти пользователя по номеру</p>
               <div className="relative">
@@ -245,33 +332,20 @@ export default function Index() {
                 />
                 {phoneSearchResult === 'searching' && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
+                    <div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
                   </div>
                 )}
               </div>
               {phoneSearchResult === 'not_found' && (
                 <div className="mt-2 px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground flex items-center gap-2 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
                   <Icon name="UserX" size={14} />
-                  Пользователь с таким номером не найден
-                </div>
-              )}
-              {phoneSearchResult === 'found' && (
-                <div className="mt-2 px-3 py-2.5 rounded-xl border border-border flex items-center gap-3 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: 'hsl(var(--n-accent) / 0.2)', color: 'hsl(var(--n-accent))' }}>?</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Пользователь найден</p>
-                    <p className="text-xs text-muted-foreground">{phoneSearch}</p>
-                  </div>
-                  <button className="text-xs px-2.5 py-1 rounded-lg transition-all hover:opacity-90" style={{ background: 'hsl(var(--n-accent))', color: 'hsl(220 16% 8%)' }}>
-                    Написать
-                  </button>
+                  Пользователь не найден
                 </div>
               )}
               {filteredContacts.length === 0 && !phoneSearch && (
-                <p className="text-xs text-muted-foreground text-center mt-4 px-2">Контактов пока нет. Введите номер, чтобы найти пользователя</p>
+                <p className="text-xs text-muted-foreground text-center mt-4 px-2">Введите номер, чтобы найти пользователя</p>
               )}
             </div>
-
             {filteredContacts.map(contact => (
               <button
                 key={contact.id}
@@ -299,9 +373,7 @@ export default function Index() {
                   <p className="text-sm font-medium truncate">{contact.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{contact.status}</p>
                 </div>
-                <span
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                >
+                <span className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
                   <Icon name="MessageCircle" size={14} />
                 </span>
               </button>
@@ -317,31 +389,26 @@ export default function Index() {
                 className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold mb-3 n-glow"
                 style={{ background: 'hsl(var(--n-accent) / 0.2)', color: 'hsl(var(--n-accent))' }}
               >
-                ВП
+                {getInitials(myName)}
               </div>
-              <p className="font-semibold text-sm">Владимир Петров</p>
-              <p className="text-xs text-muted-foreground mt-1">@vladimir_petrov</p>
+              <p className="font-semibold text-sm">{myName}</p>
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="n-online-dot w-2 h-2 rounded-full" />
                 <span className="text-xs" style={{ color: 'hsl(var(--n-online))' }}>В сети</span>
               </div>
             </div>
             <div className="space-y-2">
-              {[
-                { label: 'Имя', value: 'Владимир Петров' },
-                { label: 'Телефон', value: '+7 (999) 123-45-67' },
-                { label: 'О себе', value: 'Разрабатываю полезные продукты' },
-              ].map(field => (
-                <div key={field.label} className="rounded-xl px-3 py-2.5 border border-border" style={{ background: 'hsl(var(--n-sidebar))' }}>
-                  <p className="text-xs text-muted-foreground mb-0.5">{field.label}</p>
-                  <p className="text-sm">{field.value}</p>
-                </div>
-              ))}
+              <div className="rounded-xl px-3 py-2.5 border border-border" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                <p className="text-xs text-muted-foreground mb-0.5">Имя</p>
+                <p className="text-sm">{myName}</p>
+              </div>
               <button
-                className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95"
-                style={{ background: 'hsl(var(--n-accent))', color: 'hsl(220 16% 8%)' }}
+                onClick={handleLogout}
+                className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+                style={{ background: 'hsl(var(--destructive) / 0.15)', color: 'hsl(var(--destructive))' }}
               >
-                Редактировать профиль
+                <Icon name="LogOut" size={14} />
+                Выйти и сменить имя
               </button>
             </div>
           </div>
@@ -383,7 +450,6 @@ export default function Index() {
       <main className="flex-1 flex flex-col min-w-0">
         {activeChat ? (
           <>
-            {/* Шапка */}
             <div
               className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0"
               style={{ background: 'hsl(var(--n-chat-list))' }}
@@ -433,7 +499,6 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Сообщения */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
               {activeChat.messages.map((msg, i) => (
                 <div
@@ -476,7 +541,6 @@ export default function Index() {
               ))}
             </div>
 
-            {/* Поле ввода */}
             <div
               className="px-4 py-3 border-t border-border shrink-0"
               style={{ background: 'hsl(var(--n-chat-list))' }}
@@ -533,11 +597,11 @@ export default function Index() {
               className="w-20 h-20 rounded-3xl flex items-center justify-center n-glow"
               style={{ background: 'hsl(var(--n-accent) / 0.1)' }}
             >
-              <span className="text-3xl font-bold" style={{ color: 'hsl(var(--n-accent))' }}>Н</span>
+              <span className="text-3xl font-bold" style={{ color: 'hsl(var(--n-accent))' }}>{getInitials(myName)}</span>
             </div>
             <div className="text-center">
-              <h2 className="text-lg font-semibold mb-1">Добро пожаловать в Николай</h2>
-              <p className="text-sm text-muted-foreground">Выберите чат слева, чтобы начать общение</p>
+              <h2 className="text-lg font-semibold mb-1">Привет, {myName}!</h2>
+              <p className="text-sm text-muted-foreground">Выберите чат или найдите собеседника по номеру</p>
             </div>
           </div>
         )}
@@ -575,6 +639,9 @@ export default function Index() {
               Выберите участников ({selectedContacts.length} выбрано, мин. 2):
             </p>
             <div className="space-y-1 max-h-44 overflow-y-auto mb-4">
+              {CONTACTS.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">Контактов пока нет</p>
+              )}
               {CONTACTS.map(contact => (
                 <button
                   key={contact.id}
