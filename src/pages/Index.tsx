@@ -17,6 +17,18 @@ export default function Index() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [phoneSearch, setPhoneSearch] = useState('');
+  const [phoneSearchResult, setPhoneSearchResult] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
+
+  const handlePhoneSearch = (val: string) => {
+    setPhoneSearch(val);
+    setPhoneSearchResult('idle');
+    const digits = val.replace(/\D/g, '');
+    if (digits.length >= 10) {
+      setPhoneSearchResult('searching');
+      setTimeout(() => setPhoneSearchResult('not_found'), 1200);
+    }
+  };
 
   const activeChat = chats.find(c => c.id === activeChatId);
 
@@ -217,6 +229,49 @@ export default function Index() {
         {/* Контакты */}
         {activeView === 'contacts' && (
           <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
+
+            {/* Поиск по номеру */}
+            <div className="px-2 pb-3">
+              <p className="text-xs text-muted-foreground mb-2 px-1">Найти пользователя по номеру</p>
+              <div className="relative">
+                <Icon name="Phone" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="tel"
+                  placeholder="+7 (___) ___-__-__"
+                  value={phoneSearch}
+                  onChange={e => handlePhoneSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 rounded-xl text-sm outline-none border border-transparent focus:border-border transition-all"
+                  style={{ background: 'hsl(var(--n-sidebar))', color: 'hsl(var(--foreground))' }}
+                />
+                {phoneSearchResult === 'searching' && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
+                  </div>
+                )}
+              </div>
+              {phoneSearchResult === 'not_found' && (
+                <div className="mt-2 px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground flex items-center gap-2 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                  <Icon name="UserX" size={14} />
+                  Пользователь с таким номером не найден
+                </div>
+              )}
+              {phoneSearchResult === 'found' && (
+                <div className="mt-2 px-3 py-2.5 rounded-xl border border-border flex items-center gap-3 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: 'hsl(var(--n-accent) / 0.2)', color: 'hsl(var(--n-accent))' }}>?</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Пользователь найден</p>
+                    <p className="text-xs text-muted-foreground">{phoneSearch}</p>
+                  </div>
+                  <button className="text-xs px-2.5 py-1 rounded-lg transition-all hover:opacity-90" style={{ background: 'hsl(var(--n-accent))', color: 'hsl(220 16% 8%)' }}>
+                    Написать
+                  </button>
+                </div>
+              )}
+              {filteredContacts.length === 0 && !phoneSearch && (
+                <p className="text-xs text-muted-foreground text-center mt-4 px-2">Контактов пока нет. Введите номер, чтобы найти пользователя</p>
+              )}
+            </div>
+
             {filteredContacts.map(contact => (
               <button
                 key={contact.id}
