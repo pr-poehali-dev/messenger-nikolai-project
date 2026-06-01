@@ -88,6 +88,9 @@ export default function Index() {
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [phoneSearch, setPhoneSearch] = useState('');
   const [phoneSearchResult, setPhoneSearchResult] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
+  const [nameSearch, setNameSearch] = useState('');
+  const [nameSearchResult, setNameSearchResult] = useState<'idle' | 'searching' | 'not_found'>('idle');
+  const [searchTab, setSearchTab] = useState<'name' | 'phone'>('name');
 
   const handleEnter = (name: string) => {
     localStorage.setItem('nikolay_name', name);
@@ -108,6 +111,15 @@ export default function Index() {
     if (digits.length >= 10) {
       setPhoneSearchResult('searching');
       setTimeout(() => setPhoneSearchResult('not_found'), 1200);
+    }
+  };
+
+  const handleNameSearch = (val: string) => {
+    setNameSearch(val);
+    setNameSearchResult('idle');
+    if (val.trim().length >= 2) {
+      setNameSearchResult('searching');
+      setTimeout(() => setNameSearchResult('not_found'), 1000);
     }
   };
 
@@ -319,31 +331,88 @@ export default function Index() {
         {activeView === 'contacts' && (
           <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
             <div className="px-2 pb-3">
-              <p className="text-xs text-muted-foreground mb-2 px-1">Найти пользователя по номеру</p>
-              <div className="relative">
-                <Icon name="Phone" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="tel"
-                  placeholder="+7 (___) ___-__-__"
-                  value={phoneSearch}
-                  onChange={e => handlePhoneSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 rounded-xl text-sm outline-none border border-transparent focus:border-border transition-all"
-                  style={{ background: 'hsl(var(--n-sidebar))', color: 'hsl(var(--foreground))' }}
-                />
-                {phoneSearchResult === 'searching' && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
-                  </div>
-                )}
+
+              {/* Табы */}
+              <div className="flex rounded-xl overflow-hidden mb-3 p-0.5" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                {(['name', 'phone'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => { setSearchTab(tab); setNameSearch(''); setNameSearchResult('idle'); setPhoneSearch(''); setPhoneSearchResult('idle'); }}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={searchTab === tab ? {
+                      background: 'hsl(var(--n-accent))',
+                      color: 'hsl(220 16% 8%)',
+                    } : {
+                      color: 'hsl(var(--muted-foreground))',
+                    }}
+                  >
+                    {tab === 'name' ? 'По имени' : 'По номеру'}
+                  </button>
+                ))}
               </div>
-              {phoneSearchResult === 'not_found' && (
-                <div className="mt-2 px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground flex items-center gap-2 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
-                  <Icon name="UserX" size={14} />
-                  Пользователь не найден
-                </div>
+
+              {/* Поиск по имени */}
+              {searchTab === 'name' && (
+                <>
+                  <div className="relative">
+                    <Icon name="User" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Введите имя..."
+                      value={nameSearch}
+                      onChange={e => handleNameSearch(e.target.value)}
+                      autoFocus
+                      className="w-full pl-8 pr-8 py-2 rounded-xl text-sm outline-none border border-transparent focus:border-border transition-all"
+                      style={{ background: 'hsl(var(--n-sidebar))', color: 'hsl(var(--foreground))' }}
+                    />
+                    {nameSearchResult === 'searching' && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
+                      </div>
+                    )}
+                  </div>
+                  {nameSearchResult === 'not_found' && (
+                    <div className="mt-2 px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground flex items-center gap-2 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                      <Icon name="UserX" size={14} />
+                      Пользователь с таким именем не найден
+                    </div>
+                  )}
+                  {!nameSearch && (
+                    <p className="text-xs text-muted-foreground text-center mt-3 px-2">Введите имя, чтобы найти пользователя</p>
+                  )}
+                </>
               )}
-              {filteredContacts.length === 0 && !phoneSearch && (
-                <p className="text-xs text-muted-foreground text-center mt-4 px-2">Введите номер, чтобы найти пользователя</p>
+
+              {/* Поиск по номеру */}
+              {searchTab === 'phone' && (
+                <>
+                  <div className="relative">
+                    <Icon name="Phone" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="tel"
+                      placeholder="+7 (___) ___-__-__"
+                      value={phoneSearch}
+                      onChange={e => handlePhoneSearch(e.target.value)}
+                      autoFocus
+                      className="w-full pl-8 pr-8 py-2 rounded-xl text-sm outline-none border border-transparent focus:border-border transition-all"
+                      style={{ background: 'hsl(var(--n-sidebar))', color: 'hsl(var(--foreground))' }}
+                    />
+                    {phoneSearchResult === 'searching' && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'hsl(var(--n-accent))', borderTopColor: 'transparent' }} />
+                      </div>
+                    )}
+                  </div>
+                  {phoneSearchResult === 'not_found' && (
+                    <div className="mt-2 px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground flex items-center gap-2 animate-fade-in" style={{ background: 'hsl(var(--n-sidebar))' }}>
+                      <Icon name="UserX" size={14} />
+                      Пользователь не найден
+                    </div>
+                  )}
+                  {!phoneSearch && (
+                    <p className="text-xs text-muted-foreground text-center mt-3 px-2">Введите номер телефона</p>
+                  )}
+                </>
               )}
             </div>
             {filteredContacts.map(contact => (
