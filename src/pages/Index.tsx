@@ -1,68 +1,11 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 
-const CONTACTS = [
-  { id: 1, name: 'Алексей Громов', avatar: 'АГ', online: true, status: 'В сети' },
-  { id: 2, name: 'Марина Соколова', avatar: 'МС', online: false, status: 'Был(а) час назад' },
-  { id: 3, name: 'Дмитрий Волков', avatar: 'ДВ', online: true, status: 'В сети' },
-  { id: 4, name: 'Наталья Белова', avatar: 'НБ', online: false, status: 'Был(а) вчера' },
-  { id: 5, name: 'Сергей Козлов', avatar: 'СК', online: true, status: 'В сети' },
-  { id: 6, name: 'Ольга Морозова', avatar: 'ОМ', online: false, status: 'Был(а) 3 дня назад' },
-  { id: 7, name: 'Иван Новиков', avatar: 'ИН', online: true, status: 'В сети' },
-];
-
-const CHATS_INITIAL = [
-  {
-    id: 1, name: 'Алексей Громов', avatar: 'АГ', online: true, isGroup: false,
-    lastMsg: 'Увидимся завтра в 10:00', time: '14:23', unread: 2,
-    messages: [
-      { id: 1, text: 'Привет, как дела?', out: false, time: '14:10' },
-      { id: 2, text: 'Всё отлично, спасибо! Работаю над новым проектом', out: true, time: '14:12' },
-      { id: 3, text: 'Звучит интересно! Расскажи подробнее', out: false, time: '14:15' },
-      { id: 4, text: 'Это мессенджер — хотим сделать удобное общение для всех', out: true, time: '14:18' },
-      { id: 5, text: 'Увидимся завтра в 10:00', out: false, time: '14:23' },
-    ]
-  },
-  {
-    id: 2, name: 'Команда разработки', avatar: '👨‍💻', online: false, isGroup: true,
-    lastMsg: 'Дмитрий: Деплой прошёл успешно!', time: '13:45', unread: 5,
-    messages: [
-      { id: 1, text: 'Начинаем спринт, все готовы?', out: false, sender: 'Наталья', time: '10:00' },
-      { id: 2, text: 'Готов!', out: true, time: '10:02' },
-      { id: 3, text: 'Я тоже, задачи взяты', out: false, sender: 'Сергей', time: '10:05' },
-      { id: 4, text: 'Деплой прошёл успешно!', out: false, sender: 'Дмитрий', time: '13:45' },
-    ]
-  },
-  {
-    id: 3, name: 'Марина Соколова', avatar: 'МС', online: false, isGroup: false,
-    lastMsg: 'Спасибо за помощь!', time: 'Вчера', unread: 0,
-    messages: [
-      { id: 1, text: 'Можешь помочь с документами?', out: false, time: 'Вчера' },
-      { id: 2, text: 'Конечно, присылай', out: true, time: 'Вчера' },
-      { id: 3, text: 'Спасибо за помощь!', out: false, time: 'Вчера' },
-    ]
-  },
-  {
-    id: 4, name: 'Проект Альфа', avatar: '🚀', online: false, isGroup: true,
-    lastMsg: 'Алексей: Презентация готова', time: 'Вчера', unread: 1,
-    messages: [
-      { id: 1, text: 'Встреча с клиентом во вторник', out: false, sender: 'Иван', time: 'Вчера' },
-      { id: 2, text: 'Буду', out: true, time: 'Вчера' },
-      { id: 3, text: 'Презентация готова', out: false, sender: 'Алексей', time: 'Вчера' },
-    ]
-  },
-  {
-    id: 5, name: 'Дмитрий Волков', avatar: 'ДВ', online: true, isGroup: false,
-    lastMsg: 'Отличная идея!', time: 'Пн', unread: 0,
-    messages: [
-      { id: 1, text: 'Как тебе концепция нового дизайна?', out: true, time: 'Пн' },
-      { id: 2, text: 'Отличная идея!', out: false, time: 'Пн' },
-    ]
-  },
-];
-
 type Message = { id: number; text: string; out: boolean; time: string; sender?: string };
 type Chat = { id: number; name: string; avatar: string; online: boolean; isGroup: boolean; lastMsg: string; time: string; unread: number; messages: Message[] };
+
+const CONTACTS: { id: number; name: string; avatar: string; online: boolean; status: string }[] = [];
+const CHATS_INITIAL: Chat[] = [];
 type View = 'chats' | 'contacts' | 'profile' | 'settings';
 
 export default function Index() {
