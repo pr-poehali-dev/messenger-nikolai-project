@@ -136,9 +136,11 @@ export default function Index() {
     if (val.trim().length < 2) return;
     setNameSearchResult('searching');
     fetch(`${USERS_URL}?name=${encodeURIComponent(val.trim())}&session_id=${getSessionId()}`)
-      .then(r => r.json())
-      .then(data => {
-        const users: FoundUser[] = JSON.parse(data).users ?? [];
+      .then(r => r.text())
+      .then(text => {
+        const raw = JSON.parse(text);
+        const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const users: FoundUser[] = data.users ?? [];
         setFoundUsers(users);
         setNameSearchResult(users.length > 0 ? 'found' : 'not_found');
       })
