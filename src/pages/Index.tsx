@@ -4,9 +4,18 @@ import Icon from '@/components/ui/icon';
 type Message = { id: number; text: string; out: boolean; time: string; sender?: string };
 type Chat = { id: number; name: string; avatar: string; online: boolean; isGroup: boolean; lastMsg: string; time: string; unread: number; messages: Message[] };
 
+const USERS_URL = 'https://functions.poehali.dev/6f0d02ea-428c-4249-a855-15daa6bc2fb2';
+
+function getSessionId() {
+  let sid = localStorage.getItem('nikolay_session');
+  if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('nikolay_session', sid); }
+  return sid;
+}
+
 const CONTACTS: { id: number; name: string; avatar: string; online: boolean; status: string }[] = [];
 const CHATS_INITIAL: Chat[] = [];
 type View = 'chats' | 'contacts' | 'profile' | 'settings';
+type FoundUser = { id: number; name: string; session_id: string; online: boolean };
 
 function getInitials(name: string) {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -89,12 +98,18 @@ export default function Index() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [phoneSearchResult, setPhoneSearchResult] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
   const [nameSearch, setNameSearch] = useState('');
-  const [nameSearchResult, setNameSearchResult] = useState<'idle' | 'searching' | 'not_found'>('idle');
+  const [nameSearchResult, setNameSearchResult] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
+  const [foundUsers, setFoundUsers] = useState<FoundUser[]>([]);
   const [searchTab, setSearchTab] = useState<'name' | 'phone'>('name');
 
   const handleEnter = (name: string) => {
     localStorage.setItem('nikolay_name', name);
     setMyName(name);
+    fetch(USERS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, session_id: getSessionId() }),
+    });
   };
 
   const handleLogout = () => {
@@ -116,12 +131,30 @@ export default function Index() {
 
   const handleNameSearch = (val: string) => {
     setNameSearch(val);
+    setFoundUsers([]);
     setNameSearchResult('idle');
-    if (val.trim().length >= 2) {
-      setNameSearchResult('searching');
-      setTimeout(() => setNameSearchResult('not_found'), 1000);
-    }
+    if (val.trim().length < 2) return;
+    setNameSearchResult('searching');
+    fetch(`${USERS_URL}?name=${encodeURIComponent(val.trim())}&session_id=${getSessionId()}`)
+      .then(r => r.json())
+      .then(data => {
+        const users: FoundUser[] = JSON.parse(data).users ?? [];
+        setFoundUsers(users);
+        setNameSearchResult(users.length > 0 ? 'found' : 'not_found');
+      })
+      .catch(() => setNameSearchResult('not_found'));
   };
+
+  // Регистрируем имя в БД при загрузке если уже вошли
+  useEffect(() => {
+    if (myName) {
+      fetch(USERS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: myName, session_id: getSessionId() }),
+      });
+    }
+  }, [myName]);
 
   if (!myName) return <WelcomeScreen onEnter={handleEnter} />;
 
@@ -377,6 +410,39 @@ export default function Index() {
                       Пользователь с таким именем не найден
                     </div>
                   )}
+                  {nameSearchResult === 'found' && foundUsers.map(user => (
+                    <button
+                      key={user.id}
+                      onClick={() => {
+                        const existing = chats.find(c => !c.isGroup && c.name === user.name);
+                        if (existing) { setActiveChatId(existing.id); setActiveView('chats'); return; }
+                        const newChat: Chat = {
+                          id: Date.now(), name: user.name,
+                          avatar: getInitials(user.name), online: user.online, isGroup: false,
+                          lastMsg: '', time: '', unread: 0, messages: [],
+                        };
+                        setChats(prev => [newChat, ...prev]);
+                        setActiveChatId(newChat.id);
+                        setActiveView('chats');
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 mt-1.5 rounded-xl text-left transition-all hover:bg-muted/40 animate-fade-in border border-border"
+                      style={{ background: 'hsl(var(--n-sidebar))' }}
+                    >
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 relative"
+                        style={{ background: 'hsl(var(--n-accent) / 0.2)', color: 'hsl(var(--n-accent))' }}>
+                        {getInitials(user.name)}
+                        {user.online && <span className="n-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: 'hsl(var(--n-chat-list))' }} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.online ? 'В сети' : 'Не в сети'}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg" style={{ background: 'hsl(var(--n-accent))', color: 'hsl(220 16% 8%)' }}>
+                        <Icon name="MessageCircle" size={12} />
+                        Написать
+                      </div>
+                    </button>
+                  ))}
                   {!nameSearch && (
                     <p className="text-xs text-muted-foreground text-center mt-3 px-2">Введите имя, чтобы найти пользователя</p>
                   )}
